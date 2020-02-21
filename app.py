@@ -1,22 +1,25 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://localhost:5432/loginfo'
-cors = CORS(app, resources={r"/*": {"origins": "*"}})
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:postgres@localhost:5432/logins'
+SQLALCHEMY_TRACK_MODIFICATIONS = False
+CORS(app, supports_credentials=True)
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 class LoginInfo(db.Model):
-    __tablename__ = "logins"
+    __tablename__ = "logininfo"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True)
     password = db.Column(db.String(40))
 
-    def __init__(username, password):
-        this.username = username
-        this.password = password
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
     
     def __repr__(self):
         return '<User %r>' % self.username
@@ -25,21 +28,46 @@ class LoginInfo(db.Model):
 @app.route('/')
 def index():
     return render_template('index.html')
-
-# Save e-mail to database and send to success page
+ 
+# save username and password to the database
 @app.route('/register', methods=['POST'])
 def insert():
-    username = None
     if request.method == 'POST':
         content = request.json
-        print(content)
-        #print('username' + username)
-        # if not db.session.query(User).filter(User.username == username).count():
-        #     username = User(username)
-        #     db.session.add(usernmae)
-        #     db.session.commit()
-        return render_template('success.html')
-    return render_template('index.html')
+        #print(content)
+        user = content.get('username')
+        pw = content.get('password')
+        #print('username: {}'.format(user))
+        #print('password: {}'.format(pw))
+        entry = LoginInfo(user, pw)
+        db.session.add(entry)
+        db.session.commit()
+        return { "message": "username {entry.username} has been create successfully" }
+    else:
+        return { "error": "The request was not a post request" }
+
+@app.route('/dologin', methods=['GET', 'POST'])
+def getUserAndPw():
+    if request.method == 'POST' or request.method == 'GET':
+        content = request.json
+        user = content.get('username')
+        pw = content.get('password')
+        print('user login: {}'.format(user))
+        print('user password: {}'.format(pw))
+        username = LoginInfo.query.filter_by(username=user)
+        password = LoginInfo.query.filter_by(password=pw)
+        if (user == username and password == pw):
+            print("Login successful!")
+            return { "message": "Success!"}
+        else:
+            print("Login failure")
+            return { "messsage": "Failure" }
+    else:
+        return {"error": "No POST request received"}
+
+
+
+
 
 
 if __name__ == "__main__":
