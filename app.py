@@ -54,14 +54,21 @@ def getUserAndPw():
         pw = content.get('password')
         print('user login: {}'.format(user))
         print('user password: {}'.format(pw))
-        username = LoginInfo.query.filter_by(username=user)
-        password = LoginInfo.query.filter_by(password=pw)
-        if (user == username and password == pw):
-            print("Login successful!")
-            return { "message": "Success!"}
-        else:
-            print("Login failure")
-            return { "messsage": "Failure" }
+        logins = LoginInfo.query.all()
+        results = [
+            {
+                "username": login.username,
+                "password": login.password
+            } for login in logins
+        ]
+
+        for login in logins:
+            if (user == login.username and pw == login.password):
+                print("Login successful!")
+                return { "message": "Success!"}
+
+        print('Login faillure')
+        return { "message": "Failure!"}    
     else:
         return {"error": "No POST request received"}
 
